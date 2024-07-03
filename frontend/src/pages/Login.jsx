@@ -1,8 +1,13 @@
+import { useFileHandler, useInputValidation } from "6pp"
+import { CameraAlt as CameraAltIcon, } from "@mui/icons-material"
 import { Avatar, Button, Container, IconButton, Paper, Stack, TextField, Typography } from '@mui/material'
-import {CameraAlt as CameraAltIcon, CenterFocusStrong} from "@mui/icons-material"
+import axios from 'axios'
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
+import { useDispatch } from 'react-redux'
+import { server } from '../components/constants/config'
 import { VisuallyHiddenInput } from '../components/styles/StyledComponent'
-import {useFileHandler, useInputValidation} from "6pp"
+import { userExists } from '../redux/reducers/auth'
 import { usernameValidator } from '../utils/validators'
 function Login() {
   const [isLogin , setIsLogin] = useState(true)
@@ -15,11 +20,60 @@ function Login() {
   const password = useInputValidation("")
   const avatar = useFileHandler("single")
 
-  const handleSignup = (e) => {
+  const dispatch = useDispatch()
+
+
+  const handleSignup = async (e) => {
     e.preventDefault()
+
+    const formData = new FormData();
+    formData.append("avatar",avatar.file);
+    formData.append("name",name.value);
+    formData.append("bio",bio.value);
+    formData.append("username",username.value);
+    formData.append("password",password.value);
+
+    const config = {
+      withCredentials:true,
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    }
+    try {
+      const {data} = await axios.post(`${server}/api/v1/user/register`,formData,config)
+      console.log({data})
+      console.log("formData : ",formData)
+      dispatch(userExists(true))
+      toast.success(data.message)
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Something went wrong.")
+    }
   }
-  const handleLogin = (e) => {
+
+
+  const handleLogin = async (e) => {
     e.preventDefault()
+
+    const config = {
+      withCredentials:true,
+      headers: {
+        "Content-Type": "application/json"
+      },
+    }
+
+    try {
+      const {data} = await axios.post(`${server}/api/v1/user/login`,
+        {
+        username:username.value,
+        password:password.value
+        },
+        config
+      )
+      dispatch(userExists(true))
+      toast.success(data.message)
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "something went wrong")
+    }
   }
 
   return (
@@ -46,7 +100,7 @@ function Login() {
       }}
       >
         {isLogin ? 
-        <>
+        (<>
         <Typography variant='h5'>Login</Typography>
         <form style={{
           width:"100%",
@@ -56,7 +110,7 @@ function Login() {
           <TextField 
             required
             fullWidth
-            label="username"
+            label="Username"
             margin='normal'
             variant='outlined'
             value={username.value}
@@ -66,7 +120,7 @@ function Login() {
             required
             fullWidth
             type='password'
-            label="password"
+            label="Password"
             margin='normal'
             variant='outlined'
             value={password.value}
@@ -95,7 +149,7 @@ function Login() {
           </Button>
         </form>
         </>
-        : 
+        ):(
         <>
         <Typography variant='h5'>Sign Up</Typography>
         <form style={{
@@ -139,7 +193,7 @@ function Login() {
               color="error" 
               variant='caption'
               m={"1rem auto"}
-              width={"fit=content"}
+              width={"fit-content"}
               display={"block"}
               >
               {avatar.error}
@@ -168,7 +222,7 @@ function Login() {
           <TextField 
             required
             fullWidth
-            label="username"
+            label="Username"
             margin='normal'
             variant='outlined'
             value={username.value}
@@ -186,13 +240,15 @@ function Login() {
             required
             fullWidth
             type='password'
-            label="password"
+            label="Password"
             margin='normal'
             variant='outlined'
             value={password.value}
             onChange={password.changeHandler}
+            autoComplete='true'
           />
           <Button  
+            sx={{marginTop:"1rem"}}
           type='submit' 
           fullWidth 
           variant='contained' 
@@ -201,12 +257,11 @@ function Login() {
             Sign Up
           </Button>
 
-          <Typography sx={{textAlign:"center"}}>
+          <Typography sx={{textAlign:"center", m:"1rem"}}>
             OR
           </Typography>
 
           <Button 
-          sx={{marginTop:"0 0"}}
           fullWidth 
           variant='text' 
           onClick={toggleLogin}
@@ -214,7 +269,7 @@ function Login() {
             Login Instead
           </Button>
         </form>
-        </>}
+        </>)}
       </Paper>
       
     </Container>
