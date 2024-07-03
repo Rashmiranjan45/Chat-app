@@ -1,25 +1,23 @@
-import React, { useEffect } from 'react'
-import Header from './Header'
-import Title from '../shared/Title'
 import { Drawer, Grid, Skeleton } from '@mui/material'
-import ChatList from '../specific/ChatList'
-import { sampleChats } from '../constants/sampleChats'
-import { useParams } from 'react-router-dom'
-import Profile from '../specific/Profile'
-import { useMyChatQuery } from '../../redux/api/api'
+import React from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { setIsMobile } from '../../redux/reducers/misc'
-import toast from 'react-hot-toast'
+import { useParams } from 'react-router-dom'
 import { useErrors } from '../../hooks/hook'
-import { getSocket } from '../../socket'
+import { useMyChatQuery } from '../../redux/api/api'
+import { setIsMobile } from '../../redux/reducers/misc'
+import Title from '../shared/Title'
+import ChatList from '../specific/ChatList'
+import Profile from '../specific/Profile'
+import Header from './Header'
+// import { getSocket } from '../../socket'
 //TODO-CHAT-SHOW
 const AppLayout = () => (WrappedComponent) => {
   return (props) => {
     const dispatch = useDispatch()
     const params = useParams()
     const chatId = params.chatId
-    const socket = getSocket()
-    console.log(socket.id)
+    // const socket = getSocket()
+    // console.log(socket.id)
     const {isMobile} = useSelector(state => state.misc)
     const {user} = useSelector(state => state.auth)
 
