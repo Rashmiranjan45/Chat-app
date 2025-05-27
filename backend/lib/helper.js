@@ -1,16 +1,10 @@
 import { userSocketIDs } from "../src/index.js";
 
-export const getOtherMembers = (member, userId) => {
-  if (member.length === 0) {
-    console.log("member is empty");
-    return null;
-  }
-  return member.find((member) => member._id.toString() !== userId.toString());
-  // return member.filter(member => member._id.toString() !== userId.toString());
-};
+export const getOtherMember = (members, userId) =>
+  members.find((member) => member._id.toString() !== userId.toString());
 
 export const getSockets = (users = []) => {
-  const sockets = users.map((user) => userSocketIDs.get(user._id.toString()));
+  const sockets = users.map((user) => userSocketIDs.get(user.toString()));
   return sockets;
 };
 

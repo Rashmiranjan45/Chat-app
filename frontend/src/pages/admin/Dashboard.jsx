@@ -1,26 +1,42 @@
+import {
+  Box,
+  Container,
+  Paper,
+  Skeleton,
+  Stack,
+  Typography
+} from '@mui/material'
 import React from 'react'
 import AdminLayout from '../../components/layout/AdminLayout'
-import {
-  Box, 
-  Container, 
-  Paper, 
-  Stack, 
-  Typography 
-} from '@mui/material'
 
-import { 
-  AdminPanelSettings as AdminPanelSettingsIcon, 
-  Group as GroupIcon, 
-  Message as MessageIcon, 
-  Notifications as NotificationsIcon, 
+import {
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Group as GroupIcon,
+  Message as MessageIcon,
+  Notifications as NotificationsIcon,
   Person as PersonIcon
 } from '@mui/icons-material'
 
+import { useFetchData } from '6pp'
 import moment from "moment"
-import { CurveButton, SearchField } from '../../components/styles/StyledComponent'
+import { server } from '../../components/constants/config'
 import { DoughnutChart, LineChart } from '../../components/specific/Charts'
+import { CurveButton, SearchField } from '../../components/styles/StyledComponent'
+import { useErrors } from "../../hooks/hook"
+
 
 const Dashboard = () => {
+  const {loading,data,error} = useFetchData(
+    `${server}/api/v1/admin/stats`,
+    "dashboard-stats"
+  );
+
+  useErrors([{
+    isError: error,
+    error: error
+  }])
+
+
   const Appbar = (
     <Paper 
       elevation={3}
@@ -35,7 +51,7 @@ const Dashboard = () => {
           alignItems={"center"} 
           spacing={"1rem"}>
           <AdminPanelSettingsIcon sx={{fontSize:"3rem"}}/>
-          <SearchField placeholder='search...'/>
+          <SearchField placeholder='Search...'/>
           <CurveButton>Search</CurveButton>
           <Box flexGrow={1}/>
           <Typography
@@ -64,14 +80,15 @@ const Dashboard = () => {
       alignItems={"center"}
       margin={"2rem 0"}
     >
-      <Widget title={"Users"} value={34} Icon={<PersonIcon/>}/>
-      <Widget title={"Chats"} value={3} Icon={<GroupIcon/>}/>
-      <Widget title={"Messages"} value={453} Icon={<MessageIcon/>}/>
+      <Widget title={"Users"} value={data?.data?.stats?.usersCount} Icon={<PersonIcon/>}/>
+      <Widget title={"Chats"} value={data?.data?.stats?.totalChatsCount} Icon={<GroupIcon/>}/>
+      <Widget title={"Messages"} value={data?.data?.stats?.messagesCount} Icon={<MessageIcon/>}/>
     </Stack>
   );
   return (
     <AdminLayout>
-      <Container component={"main"}>
+      {loading ? (<Skeleton height={"100vh"}/>) : (
+        <Container component={"main"}>
         {Appbar}
         <Stack
           justifyContent={"center"}
@@ -98,24 +115,29 @@ const Dashboard = () => {
             }}
           >
             <Typography variant='h4' margin={"2rem 0"}>Last Messages</Typography>
-            <LineChart value={[23,45,56,33,67,3]}/>
+            <LineChart value={data?.data?.stats?.messagesChart || []}/>
           </Paper>
           
           <Paper
             elevation={3}  
             sx={{
-              padding:"1rem",
-              borderRadius:"1rem",
-              display:"flex",
-              justifyContent:"center",
-              alignItems:"center",
-              width:{xs:"100%",sm:"50%"},
-              position:"relative",
-              width:"100%",
-              maxWidth:"25rem",
+              padding: "1rem ",
+              borderRadius: "1rem",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: { xs: "100%", sm: "50%" },
+              position: "relative",
+              maxWidth: "25rem",
             }}
           >
-            <DoughnutChart value={[23,66]} labels={["Single Chats","Group Chats"]}/>
+            <DoughnutChart 
+              value={[
+                data?.data?.stats?.totalChatsCount - data?.data?.stats?.groupsCount || 0,
+                data?.data?.stats?.groupsCount || 0
+              ]} 
+              labels={["Single Chats","Group Chats"]}
+            />
 
             <Stack
               position={"absolute"}
@@ -134,6 +156,7 @@ const Dashboard = () => {
         </Stack>
         {Widgets}
       </Container>
+      )}
     </AdminLayout>
   )
 }

@@ -1,13 +1,11 @@
-import { Dialog, DialogTitle, InputAdornment, List, ListItem, ListItemText, Stack, TextField } from '@mui/material'
+import { Dialog, DialogTitle, InputAdornment, List, Stack, TextField } from '@mui/material'
 import React, { useEffect, useState } from 'react'
 import {useInputValidation} from "6pp"
 import { Search as SearchIcon } from '@mui/icons-material'
 import UserItem from '../shared/UserItem'
-import { sampleUser } from '../constants/sampleChats'
 import { useDispatch, useSelector } from 'react-redux'
 import { setIsSearch } from '../../redux/reducers/misc'
 import { useLazySearchUserQuery, useSendFriendRequestMutation } from '../../redux/api/api'
-import toast from 'react-hot-toast'
 import { useAsyncMutation } from '../../hooks/hook'
 
 const Search = () => {

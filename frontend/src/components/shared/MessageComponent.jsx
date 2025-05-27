@@ -4,13 +4,16 @@ import { lightBlue } from '../constants/color'
 import moment from 'moment'
 import { fileFormat } from '../../lib/features'
 import RenderAttachment from './RenderAttachment'
+import {motion} from "framer-motion"
 
 const MessageComponent = ({message,user}) => {
     const {sender,content,attachments = [],createdAt} = message
     const sameSender = sender?._id === user?._id
     const timeAgo = moment(createdAt).fromNow()
   return (
-    <div
+    <motion.div
+    initial={{opacity: 0, x: "-100%"}}
+    whileInView={{opacity: 1, x: 0}}
         style={{
             alignSelf:sameSender ? "flex-end" : "flex-start",
             backgroundColor:"white",
@@ -23,7 +26,7 @@ const MessageComponent = ({message,user}) => {
         {
             !sameSender && (
                 <Typography color={lightBlue} fontWeight={"600"} variant='caption'>
-                    {sender.name}
+                    {sender?.name}
                 </Typography>
             )
         }
@@ -34,11 +37,8 @@ const MessageComponent = ({message,user}) => {
             attachments.length > 0 && 
                 attachments.map((attachment,index) => {
                     const url = attachment.url;
-                    console.log(url)
                     const file = fileFormat(url)
-                    console.log(file)
                     return (
-                        
                         <Box key={index}>
                             <a href={url}
                              target='_blank' 
@@ -56,7 +56,7 @@ const MessageComponent = ({message,user}) => {
         <Typography variant='caption' color={"text.secondary"}>
             {timeAgo}
         </Typography>
-    </div>
+    </motion.div>
   )
 }
 

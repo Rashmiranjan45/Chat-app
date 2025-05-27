@@ -3,16 +3,21 @@ import User from "../models/user.models.js";
 import Message from "../models/message.models.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import  jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+
 const adminLogin = async (req, res) => {
   try {
     const { secretKey } = req.body;
     const adminSecretKey = process.env.ADMIN_SECRET_KEY || "RO45&&RR45";
     const isMatched = secretKey === adminSecretKey;
     if (!isMatched) {
-      throw new ApiError(401, "Inavalid Admin credentials");
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, "Invalid Admin Credentials"));
     }
     const token = jwt.sign(secretKey, process.env.ADMIN_TOKEN_SECRET_KEY);
+    
+
     return res
       .status(200)
       .cookie("admin-token", token, {
@@ -24,17 +29,17 @@ const adminLogin = async (req, res) => {
         new ApiResponse(200, {}, "AUTHENTICATED SUCCESSFULLY , WELCOME BOSS ")
       );
   } catch (error) {
-    console.log("ADMIN : ERROR : WHILE LOGIN ADMIN :: ", error);
+    return new ApiResponse(404, {}, "Admin Login Failed");
   }
 };
 
-const getAdminData = async (req,res) => {
+const getAdminData = async (req, res) => {
   try {
-    return res.status(200).json(new ApiResponse(200,{admin:true},))
+    return res.status(200).json(new ApiResponse(200, { admin: true }));
   } catch (error) {
-    console.log("ADMIN : ERROR : WHILE FETCHING ADMIN DETAILS :: ",error)
+    console.log("ADMIN : ERROR : WHILE FETCHING ADMIN DETAILS :: ", error);
   }
-}
+};
 
 const getAllUsers = async (req, res) => {
   try {
@@ -193,20 +198,20 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-const adminLogout = async (req,res) => {
+const adminLogout = async (req, res) => {
   try {
     return res
-    .status(200)
-    .cookie("admin-token","",{
-      httpOnly:true,
-      secure:true,
-      maxAge:0
-    })
-    .json(new ApiResponse(200,{},"Admin Logout"))
+      .status(200)
+      .cookie("admin-token", "", {
+        httpOnly: true,
+        secure: true,
+        maxAge: 0,
+      })
+      .json(new ApiResponse(200, {}, "Admin Logout"));
   } catch (error) {
-    console.log("ADMIN : ERROR : WHILE LOGOUT ADMIN :: ",error)
+    console.log("ADMIN : ERROR : WHILE LOGOUT ADMIN :: ", error);
   }
-}
+};
 
 export {
   getAllUsers,
@@ -215,5 +220,5 @@ export {
   getDashboardStats,
   adminLogin,
   adminLogout,
-  getAdminData
+  getAdminData,
 };

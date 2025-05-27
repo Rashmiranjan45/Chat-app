@@ -7,6 +7,4 @@ const corsOptions = {
   credentials: true,
 };
 
-export {
-    corsOptions
-}
+export { corsOptions };

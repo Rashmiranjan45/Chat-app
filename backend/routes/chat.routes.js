@@ -13,7 +13,7 @@ import {
   sendAttachment,
 } from "../controllers/chat.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { attachmentMulter } from "../middlewares/multer.middleware.js";
+import { attachmentsMulter } from "../middlewares/multer.middleware.js";
 import {
   addMemberValidator,
   chatIdValidator,
@@ -44,7 +44,7 @@ router
   .route("/message")
   .post(
     verifyJWT,
-    attachmentMulter,
+    attachmentsMulter,
     senAttachmentValidator(),
     validateHandler,
     sendAttachment

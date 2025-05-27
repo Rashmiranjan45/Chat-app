@@ -1,13 +1,23 @@
 import dotenv from "dotenv";
 import { Server } from "socket.io";
 import { v4 as uuid } from "uuid";
-import { NEW_MESSAGE, NEW_MESSAGE_ALERT } from "../constants/event.js";
+import {
+  CHAT_JOINED,
+  CHAT_LEAVED,
+  NEW_MESSAGE,
+  NEW_MESSAGE_ALERT,
+  ONLINE_USERS,
+  START_TYPING,
+  STOP_TYPING,
+} from "../constants/event.js";
 import connectDB from "../database/index.js";
 import { getSockets } from "../lib/helper.js";
 import Message from "../models/message.models.js";
-import { server } from "./app.js";
-import { v2 as cloudinary } from "cloudinary";
+import { app, server } from "./app.js";
 import { corsOptions } from "../constants/config.js";
+import cookieParser from "cookie-parser";
+import { socketAuthenticator } from "../middlewares/socket.middleware.js";
+import { v2 as cloudinary } from "cloudinary";
 
 // Load environment variables
 dotenv.config({
@@ -15,16 +25,18 @@ dotenv.config({
 });
 // Initialize Socket.IO
 const io = new Server(server, {
-  cors:corsOptions
+  cors: corsOptions,
 });
+app.set("io", io);
 export const userSocketIDs = new Map();
+const onlineUsers = new Set();
 
-connectDB(process.env.MONGODB_URI)
+connectDB()
   .then(() => {
     console.log("MONGODB CONNECTED SUCCESSFULLY.");
     server.listen(process.env.PORT, () => {
       console.log(
-        `Server started on PORT ${process.env.PORT} in ${process.env.NODE_ENV} Mode`
+        `⚙️  Server started on PORT ${process.env.PORT} in ${process.env.NODE_ENV} Mode`
       );
     });
   })
@@ -32,25 +44,24 @@ connectDB(process.env.MONGODB_URI)
     console.log("MONGODB CONNECTION FAILED");
   });
 
-// cloudinary config...
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// console.log("cloudinary.config ", cloudinary.config());
-
 //socket connection...
+
+//socket middleware...
+io.use((socket, next) => {
+  cookieParser()(socket.request, socket.request.res, async (err) => {
+    await socketAuthenticator(err, socket, next);
+  });
+});
 io.on("connection", (socket) => {
-  const user = {
-    _id: "assdjdj",
-    name: "namehem",
-  };
+  const user = socket.user;
   userSocketIDs.set(user._id.toString(), socket.id.toString());
 
-  console.log(`Client connected : ${socket.id}`);
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
       content: message,
@@ -76,20 +87,33 @@ io.on("connection", (socket) => {
     try {
       await Message.create(messageForDB);
     } catch (error) {
-      console.log("error while save messages ::", error);
+      throw new Error(error);
     }
-    console.log(`NEW MESSAGE : ${messageForRealTime}`);
   });
+  socket.on(START_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(START_TYPING, { chatId });
+  });
+
+  socket.on(STOP_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(STOP_TYPING, { chatId });
+  });
+
+  socket.on(CHAT_JOINED, ({ userId, members }) => {
+    onlineUsers.add(userId.toString());
+    const memberSocket = getSockets(members);
+    io.to(memberSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
+  socket.on(CHAT_LEAVED, ({ userId, members }) => {
+    onlineUsers.delete(userId.toString());
+    const memberSocket = getSockets(members);
+    io.to(memberSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
+
   socket.on("disconnect", () => {
-    console.log("Socket disconnected.");
     userSocketIDs.delete(user._id.toString());
+    onlineUsers.delete(user._id.toString());
+    socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
-
-// for socket.io-http://localhost:5000
-// seeders...
-
-// createUser(10)
-// createSingleChats(10)
-// createGroupChats(10)
-// createMessagesInAChat("666fcc7e1dbac520c4b30d49",50)

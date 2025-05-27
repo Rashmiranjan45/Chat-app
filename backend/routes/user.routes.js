@@ -25,10 +25,19 @@ router
   .post(singleAvatar, registerValidator(), validateHandler, registerUser);
 router.route("/login").post(loginValidator(), loginUser);
 router.route("/profile").get(verifyJWT, getMyProfile);
-router.route("/search").get(verifyJWT,searchUser);
+router.route("/search").get(verifyJWT, searchUser);
 router.route("/logout").get(verifyJWT, logoutUser);
-router.route("/send-request").put(verifyJWT,sendRequestValidator(),validateHandler, sendFriendRequest);
-router.route("/accept-request").put(verifyJWT,acceptRequestValidator(),validateHandler,acceptFriendRequest)
-router.route("/notifications").get(verifyJWT,getMyNotifications)
-router.route("/friends").get(verifyJWT,getMyFriends)
+router
+  .route("/send-request")
+  .put(verifyJWT, sendRequestValidator(), validateHandler, sendFriendRequest);
+router
+  .route("/accept-request")
+  .put(
+    verifyJWT,
+    acceptRequestValidator(),
+    validateHandler,
+    acceptFriendRequest
+  );
+router.route("/notifications").get(verifyJWT, getMyNotifications);
+router.route("/friends").get(verifyJWT, getMyFriends);
 export default router;

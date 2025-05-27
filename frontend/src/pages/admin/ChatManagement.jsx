@@ -1,10 +1,12 @@
+import { useFetchData } from '6pp'
+import { Avatar, Skeleton, Stack } from '@mui/material'
 import React, { useEffect, useState } from 'react'
+import { server } from '../../components/constants/config'
 import AdminLayout from '../../components/layout/AdminLayout'
-import Table from '../../components/shared/Table'
-import { Avatar, Stack } from '@mui/material'
-import { dashboardData } from '../../components/constants/sampleChats'
-import {transformImage} from "../../lib/features"
 import AvatarCard from "../../components/shared/AvatarCard"
+import Table from '../../components/shared/Table'
+import { useErrors } from '../../hooks/hook'
+import { transformImage } from "../../lib/features"
 const columns = [
   {
     field:"id",
@@ -22,6 +24,12 @@ const columns = [
   {
     field:"name",
     headerName:"Name",
+    headerClassName:"table-header",
+    width:300
+  },
+  {
+    field:"groupChat",
+    headerName:"Group",
     headerClassName:"table-header",
     width:300
   },
@@ -67,26 +75,42 @@ const columns = [
 
 const ChatManagement = () => {
 
+  const {loading,data,error} = useFetchData(
+    `${server}/api/v1/admin/chats`,
+    "dashboard-chats"
+  );
+
+  useErrors([{
+    isError: error,
+    error: error
+  }])
+
   const [rows, setRows] = useState([])
 
   useEffect(() => {
-    setRows(dashboardData.chats.map((i) => ({
+    if (data) {
+      console.log("ChatManagement Rendered", data?.data?.chats.avatar)
+      setRows(data?.data?.chats.map((i) => ({
       ...i,
       id:i._id,
-      avatar: i.avatar.map((i) => transformImage(i,50)),
-      members:i.members.map((i) => transformImage(i.avatar,50)),
+      avatar: i.avatar.map((i) =>i),
+      members:i.members.map((i) => i.avatar),
       creator:{
         name:i.creator.name,
-        avatar:transformImage(i.creator.avatar,50)
+        avatar:i.creator.avatar
       }
 
     })))
-  }, [])
+    }
+  }, [data])
   
 
   return (
     <AdminLayout>
+      {loading ? 
+        (<Skeleton height={"100vh"}/>) : (
         <Table heading={"All Chats"} columns={columns} rows={rows}/>
+      )}
     </AdminLayout>
   )
 }

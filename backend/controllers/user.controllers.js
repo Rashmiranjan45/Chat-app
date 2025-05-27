@@ -1,5 +1,5 @@
 import { NEW_REQUEST, REFETCH_CHATS } from "../constants/event.js";
-import { getOtherMembers } from "../lib/helper.js";
+import { getOtherMember } from "../lib/helper.js";
 import Chat from "../models/chat.models.js";
 import Request from "../models/request.models.js";
 import User from "../models/user.models.js";
@@ -31,28 +31,35 @@ const registerUser = async (req, res) => {
     if (!file) {
       return res
         .status(404)
-        .json(ApiResponse(404, "Avatar file required."));
+        .json(new ApiResponse(404, {}, "Avatar file required."));
     }
-    console.log("file :", file);
+    console.log("file :: ", file);
+    const result = await uploadFilesToCloudinary([file]);
 
-    const result = await uploadFilesToCloudinary([file]); //await uploadFilesToCloudinary([file]);
-    // console.log("result: ", result[0]);
-    if (!result) {
-      throw new ApiError(404, "Image not uploaded.");
+    if (!result || result.length === 0) {
+      return res
+        .status(500)
+        .json(new ApiResponse(500, {}, "Error while uploading avatar."));
     }
+
+    console.log("result :: ", result);
+
+    const avatar = {
+      public_id: result[0].public_id,
+      url: result[0].url,
+    };
 
     const user = await User.create({
       name,
       username,
       password,
       bio,
-      avatar: {
-        public_id: result[0].public_id,
-        url: result[0].url,
-      },
+      avatar,
     });
     if (!user) {
-      return res.status(500).json(ApiResponse(500, "User not created."));
+      return res
+        .status(500)
+        .json(new ApiResponse(500, {}, "User not created."));
     }
 
     const savedUser = await User.findById(user._id).select("-password");
@@ -73,21 +80,20 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    const { name, password, username } = req.body;
-    if (!username && !name) {
-      throw new ApiError(400, "username or email is require");
-    }
-    const user = await User.findOne({
-      $or: [{ username }, { name }],
-    });
+    const { password, username } = req.body;
+    const user = await User.findOne({ username });
     if (!user) {
-      throw new ApiError(404, "User does not exist");
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, "Invalid Username or password"));
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (!isPasswordValid) {
-      throw new ApiError(401, "Invalid user credentials");
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, "Invalid user credentials"));
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -225,10 +231,20 @@ const acceptFriendRequest = async (req, res) => {
       .populate("sender", "name")
       .populate("receiver", "name");
     if (!request) {
-      throw new ApiError(404, "Request not found.!");
+      return res
+        .status(404)
+        .json(new ApiResponse(404, {}, "Request not Found."));
     }
     if (request.receiver._id.toString() !== req.user._id.toString()) {
-      throw new ApiError(401, "You are not authorized to accept the request");
+      return res
+        .status(401)
+        .json(
+          new ApiResponse(
+            401,
+            {},
+            "You are not authorized to accept this request"
+          )
+        );
     }
     if (!accept) {
       await request.deleteOne();
@@ -236,6 +252,7 @@ const acceptFriendRequest = async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, {}, "Friend request rejected."));
     }
+
     const members = [request.sender._id, request.receiver._id];
     await Promise.all([
       Chat.create({
@@ -285,30 +302,33 @@ const getMyNotifications = async (req, res) => {
 const getMyFriends = async (req, res) => {
   try {
     const chatId = req.query.chatId;
+
     const chats = await Chat.find({
       members: req.user._id,
       groupChat: false,
     }).populate("members", "name avatar");
     const friends = chats.map(({ members }) => {
-      const otherUser = getOtherMembers(members, req.user._id); //return member.find((member) => member._id.toString() !== userId.toString());
+      const otherUser = getOtherMember(members, req.user._id); //return member.find((member) => member._id.toString() !== userId.toString());
       if (!otherUser) {
         return null;
       }
       return {
         _id: otherUser._id,
         name: otherUser.name,
-        avatar: otherUser.avatar,
+        avatar: otherUser.avatar.url,
       };
     });
-    console.log("friends : ", friends);
+
     if (chatId) {
       const chat = await Chat.findById(chatId);
-      console.log("chat : ", chat);
+
       const availableFriends = friends.filter(
         (friend) =>
           friend !== null && friend && !chat.members.includes(friend._id)
       );
-      return res.status(200).json(new ApiResponse(200, availableFriends));
+      return res
+        .status(200)
+        .json(new ApiResponse(200, { friends: availableFriends }));
     } else {
       return res.status(200).json(new ApiResponse(200, friends));
     }
